@@ -45,6 +45,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.Task
+import com.example.data.ClassSchedule
 import com.example.ui.TaskViewModel
 import com.example.ui.theme.MyApplicationTheme
 import java.text.SimpleDateFormat
@@ -74,8 +75,27 @@ fun EduAgendaApp(
     val tasks by viewModel.tasksState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
+    val schedules by viewModel.schedulesState.collectAsStateWithLifecycle()
 
+    var activeTab by remember { mutableStateOf("TAREFAS") } // "TAREFAS", "HORARIOS"
     var showAddDialog by remember { mutableStateOf(false) }
+    var showAddScheduleDialog by remember { mutableStateOf(false) }
+
+    var selectedDayOfWeek by remember {
+        val currentCalendarDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+        mutableStateOf(
+            when (currentCalendarDay) {
+                Calendar.MONDAY -> 1
+                Calendar.TUESDAY -> 2
+                Calendar.WEDNESDAY -> 3
+                Calendar.THURSDAY -> 4
+                Calendar.FRIDAY -> 5
+                Calendar.SATURDAY -> 6
+                Calendar.SUNDAY -> 7
+                else -> 1
+            }
+        )
+    }
 
     // Manage POST_NOTIFICATIONS runtime permission on Android 13+
     var hasNotificationPermission by remember {
@@ -142,7 +162,7 @@ fun EduAgendaApp(
                             )
                         }
                         Text(
-                            text = "Controle de Prazos, Provas e Trabalhos",
+                            text = if (activeTab == "TAREFAS") "Controle de Prazos, Provas e Trabalhos" else "Grade Semanal de Matérias do Estudante",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -156,31 +176,78 @@ fun EduAgendaApp(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.padding(start = 8.dp)
                     ) {
-                        val pendingCount = tasks.count { !it.isCompleted }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.HourglassEmpty,
-                                contentDescription = "",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (pendingCount == 1) "1 item pendente" else "$pendingCount pendentes",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        if (activeTab == "TAREFAS") {
+                            val pendingCount = tasks.count { !it.isCompleted }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.HourglassEmpty,
+                                    contentDescription = "",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (pendingCount == 1) "1 pendente" else "$pendingCount pendentes",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else {
+                            val countToday = schedules.count { it.dayOfWeek == selectedDayOfWeek }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Book,
+                                    contentDescription = "",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (countToday == 1) "1 aula hoje" else "$countToday aulas hoje",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
             }
         },
+        bottomBar = {
+            NavigationBar(
+                modifier = Modifier.fillMaxWidth().testTag("bottom_navigation")
+            ) {
+                NavigationBarItem(
+                    selected = activeTab == "TAREFAS",
+                    onClick = { activeTab = "TAREFAS" },
+                    icon = { Icon(Icons.Default.List, contentDescription = "Tarefas") },
+                    label = { Text("Tarefa / Prazo") },
+                    modifier = Modifier.testTag("tab_tarefas")
+                )
+                NavigationBarItem(
+                    selected = activeTab == "HORARIOS",
+                    onClick = { activeTab = "HORARIOS" },
+                    icon = { Icon(Icons.Default.Schedule, contentDescription = "Grade de Aula") },
+                    label = { Text("Grade Escolar") },
+                    modifier = Modifier.testTag("tab_horarios")
+                )
+            }
+        },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showAddDialog = true },
+                onClick = {
+                    if (activeTab == "TAREFAS") {
+                        showAddDialog = true
+                    } else {
+                        showAddScheduleDialog = true
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
@@ -192,9 +259,15 @@ fun EduAgendaApp(
                     modifier = Modifier.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Adicionar Tarefa")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "Adicionar", fontWeight = FontWeight.Bold)
+                    if (activeTab == "TAREFAS") {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Adicionar Tarefa")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Adicionar", fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Adicionar Horário")
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Nova Aula", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -204,124 +277,249 @@ fun EduAgendaApp(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Search Bar Component
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.searchQuery.value = it },
-                placeholder = { Text("Pesquisar por título, matéria ou descrição...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .testTag("search_bar"),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
-                ),
-                singleLine = true
-            )
-
-            // Dynamic Category Filter Strip
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val filters = listOf(
-                    "TODAS" to "Todas 🎯",
-                    "TRABALHOS" to "Trabalhos 📝",
-                    "PROVAS" to "Provas 🚨",
-                    "ESTUDOS" to "Estudos 📚",
-                    "PENDENTES" to "Pendentes ⏳",
-                    "CONCLUIDAS" to "Concluídas ✅"
-                )
-
-                items(filters) { (filterKey, label) ->
-                    val isSelected = selectedFilter == filterKey
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.selectedFilter.value = filterKey },
-                        label = { Text(text = label, fontWeight = FontWeight.Medium) },
-                        modifier = Modifier.testTag("filter_chip_$filterKey"),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            borderColor = Color.Transparent,
-                            selectedBorderColor = Color.Transparent,
-                            enabled = true,
-                            selected = isSelected
+            if (activeTab == "TAREFAS") {
+                // Search Bar Component
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.searchQuery.value = it },
+                    placeholder = { Text("Pesquisar por título, matéria ou descrição...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
-                    )
-                }
-            }
-
-            // Summary Info Strip for student due items
-            val upcomingTasks = tasks.filter { !it.isCompleted && (it.dateTime > System.currentTimeMillis()) }
-            if (upcomingTasks.isNotEmpty()) {
-                val nextExam = upcomingTasks.firstOrNull { it.type == "PROVA" }
-                val nextWork = upcomingTasks.firstOrNull { it.type == "TRABALHO" }
-                
-                Row(
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = when {
-                            nextExam != null -> "Próxima Prova: ${nextExam.title} (${nextExam.subject}) - Fique atento!"
-                            nextWork != null -> "Foco na entrega: ${nextWork.title} - Não deixe para depois!"
-                            else -> "Continue progredindo nos seus estudos!"
-                        },
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag("search_bar"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                    ),
+                    singleLine = true
+                )
 
-            // Tasks List / Empty State Layout
-            if (tasks.isEmpty()) {
-                EmptyStateLayout { showAddDialog = true }
+                // Dynamic Category Filter Strip
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val filters = listOf(
+                        "TODAS" to "Todas 🎯",
+                        "TRABALHOS" to "Trabalhos 📝",
+                        "PROVAS" to "Provas 🚨",
+                        "ESTUDOS" to "Estudos 📚",
+                        "PENDENTES" to "Pendentes ⏳",
+                        "CONCLUIDAS" to "Concluídas ✅"
+                    )
+
+                    items(filters) { (filterKey, label) ->
+                        val isSelected = selectedFilter == filterKey
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.selectedFilter.value = filterKey },
+                            label = { Text(text = label, fontWeight = FontWeight.Medium) },
+                            modifier = Modifier.testTag("filter_chip_$filterKey"),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = Color.Transparent,
+                                selectedBorderColor = Color.Transparent,
+                                enabled = true,
+                                selected = isSelected
+                            )
+                        )
+                    }
+                }
+
+                // Summary Info Strip for student due items
+                val upcomingTasks = tasks.filter { !it.isCompleted && (it.dateTime > System.currentTimeMillis()) }
+                if (upcomingTasks.isNotEmpty()) {
+                    val nextExam = upcomingTasks.firstOrNull { it.type == "PROVA" }
+                    val nextWork = upcomingTasks.firstOrNull { it.type == "TRABALHO" }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = when {
+                                nextExam != null -> "Próxima Prova: ${nextExam.title} (${nextExam.subject}) - Fique atento!"
+                                nextWork != null -> "Foco na entrega: ${nextWork.title} - Não deixe para depois!"
+                                else -> "Continue progredindo nos seus estudos!"
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Tasks List / Empty State Layout
+                if (tasks.isEmpty()) {
+                    EmptyStateLayout { showAddDialog = true }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 4.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(tasks, key = { it.id }) { task ->
+                            TaskListItem(
+                                task = task,
+                                onToggleComplete = { viewModel.toggleTaskCompletion(task) },
+                                onDelete = { viewModel.deleteTask(task) }
+                            )
+                        }
+                    }
+                }
             } else {
-                LazyColumn(
+                // Class Schedules Tab Content Option
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 4.dp),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(top = 4.dp)
                 ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskListItem(
-                            task = task,
-                            onToggleComplete = { viewModel.toggleTaskCompletion(task) },
-                            onDelete = { viewModel.deleteTask(task) }
-                        )
+                    Text(
+                        text = "Selecione o dia da semana:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp)
+                    )
+
+                    val daysOfWeekNames = listOf(
+                        1 to "Segunda",
+                        2 to "Terça",
+                        3 to "Quarta",
+                        4 to "Quinta",
+                        5 to "Sexta",
+                        6 to "Sábado",
+                        7 to "Domingo"
+                    )
+
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(daysOfWeekNames) { (dayNum, label) ->
+                            val isSelected = selectedDayOfWeek == dayNum
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedDayOfWeek = dayNum },
+                                label = { Text(text = label, fontWeight = FontWeight.Bold) },
+                                modifier = Modifier.testTag("day_chip_$dayNum"),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = Color.Transparent,
+                                    selectedBorderColor = Color.Transparent,
+                                    enabled = true,
+                                    selected = isSelected
+                                )
+                            )
+                        }
+                    }
+
+                    val activeDaySchedules = schedules.filter { it.dayOfWeek == selectedDayOfWeek }
+
+                    if (activeDaySchedules.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(80.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Schedule,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Text(
+                                    text = "Nenhuma aula hoje!",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Adicione suas disciplinas e horários semanais para manter sua rotina de estudos organizada nesta aba personalizada.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Button(
+                                    onClick = { showAddScheduleDialog = true },
+                                    shape = RoundedCornerShape(24.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(text = "Adicionar Aula", fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 8.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(activeDaySchedules, key = { it.id }) { schedule ->
+                                ScheduleListItem(
+                                    schedule = schedule,
+                                    onDelete = { viewModel.deleteSchedule(schedule) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -342,6 +540,19 @@ fun EduAgendaApp(
                 viewModel.addTask(title, desc, subject, timestamp, type, notifyMins)
                 showAddDialog = false
                 Toast.makeText(context, "Tarefa adicionada! Lembrete configurado.", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // Add Schedule Custom Dialog Component
+    if (showAddScheduleDialog) {
+        AddScheduleDialog(
+            selectedDay = selectedDayOfWeek,
+            onDismiss = { showAddScheduleDialog = false },
+            onSave = { subject, day, start, end, room, teacher, colorHex ->
+                viewModel.addSchedule(subject, day, start, end, room, teacher, colorHex)
+                showAddScheduleDialog = false
+                Toast.makeText(context, "Aula adicionada à sua grade!", Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -948,4 +1159,378 @@ fun formatDateTimePortuguese(timestamp: Long): String {
     
     val dateFormat = SimpleDateFormat("dd 'de' MMMM 'às' HH:mm", Locale("pt", "BR"))
     return dateFormat.format(date)
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+fun AddScheduleDialog(
+    selectedDay: Int,
+    onDismiss: () -> Unit,
+    onSave: (
+        subject: String,
+        dayOfWeek: Int,
+        startTime: String,
+        endTime: String,
+        room: String,
+        teacher: String,
+        colorHex: String
+    ) -> Unit
+) {
+    val context = LocalContext.current
+    var subject by remember { mutableStateOf("") }
+    var dayOfWeek by remember { mutableStateOf(selectedDay) }
+    var startTime by remember { mutableStateOf("08:00") }
+    var endTime by remember { mutableStateOf("09:30") }
+    var room by remember { mutableStateOf("") }
+    var teacher by remember { mutableStateOf("") }
+    var colorHex by remember { mutableStateOf("#8D4F38") } // Default primary brand aesthetic
+
+    val colorsGroup = listOf(
+        "#8D4F38" to "Terracota 🪵",
+        "#43A047" to "Verde 🌿",
+        "#00ACC1" to "Azul 🌎",
+        "#8E24AA" to "Ametista 🔮",
+        "#FB8C00" to "Laranja 🍊",
+        "#E53935" to "Rubi 🍎"
+    )
+
+    // Selection indicators for start/end times via TimePickerDialog
+    val startTimePickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            startTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+        },
+        8, 0, true
+    )
+
+    val endTimePickerDialog = TimePickerDialog(
+        context,
+        { _, hour, minute ->
+            endTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+        },
+        9, 30, true
+    )
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .wrapContentHeight()
+                .padding(vertical = 24.dp)
+                .testTag("add_schedule_dialog"),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Novo Horário de Aula",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Cancelar")
+                    }
+                }
+
+                // Day Selection Option
+                Text(
+                    text = "Dia da Semana",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val days = listOf(
+                        1 to "Seg",
+                        2 to "Ter",
+                        3 to "Qua",
+                        4 to "Qui",
+                        5 to "Sex",
+                        6 to "Sáb",
+                        7 to "Dom"
+                    )
+                    items(days) { (dayNum, label) ->
+                        val isSelected = dayOfWeek == dayNum
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { dayOfWeek = dayNum },
+                            label = { Text(label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                }
+
+                // Subject Name Input
+                OutlinedTextField(
+                    value = subject,
+                    onValueChange = { subject = it },
+                    label = { Text("Nome da Matéria (ex: Cálculo II)") },
+                    modifier = Modifier.fillMaxWidth().testTag("schedule_subject_input"),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
+
+                // Room and Teacher Inputs Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = room,
+                        onValueChange = { room = it },
+                        label = { Text("Sala/Local") },
+                        modifier = Modifier.weight(1f).testTag("schedule_room_input"),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = teacher,
+                        onValueChange = { teacher = it },
+                        label = { Text("Professor") },
+                        modifier = Modifier.weight(1f).testTag("schedule_teacher_input"),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
+
+                // Class Start/End hours selection row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Start Hour Block
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .clickable { startTimePickerDialog.show() }
+                            .padding(12.dp)
+                            .testTag("schedule_start_time_trigger")
+                    ) {
+                        Column {
+                            Text("Início", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(startTime, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+
+                    // End Hour Block
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .clickable { endTimePickerDialog.show() }
+                            .padding(12.dp)
+                            .testTag("schedule_end_time_trigger")
+                    ) {
+                        Column {
+                            Text("Término", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(endTime, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+
+                // Personalized Accent Color choice
+                Text(
+                    text = "Cor de Destaque",
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(colorsGroup) { (hexStr, label) ->
+                        val colorParsed = Color(android.graphics.Color.parseColor(hexStr))
+                        val isSelected = colorHex == hexStr
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colorParsed)
+                                .clickable { colorHex = hexStr }
+                                .padding(2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Save button
+                Button(
+                    onClick = {
+                        if (subject.isBlank()) {
+                            Toast.makeText(context, "Digite o nome da matéria!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            onSave(subject, dayOfWeek, startTime, endTime, room, teacher, colorHex)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("submit_schedule_button")
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Salvar Horário", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleListItem(
+    schedule: ClassSchedule,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val accentColor = remember(schedule.colorHex) {
+        try {
+            Color(android.graphics.Color.parseColor(schedule.colorHex))
+        } catch (e: Exception) {
+            Color(0xFF8D4F38)
+        }
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth().testTag("schedule_card_${schedule.id}"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left color highlight bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Text Details
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "${schedule.startTime} - ${schedule.endTime}",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = accentColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = schedule.subject,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                if (schedule.room.isNotBlank() || schedule.teacher.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (schedule.room.isNotBlank()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Place,
+                                    contentDescription = "Local",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = schedule.room,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (schedule.teacher.isNotBlank()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = "Professor",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = schedule.teacher,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Delete button
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.testTag("delete_schedule_button_${schedule.id}")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Excluir aula",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
 }
