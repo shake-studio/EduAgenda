@@ -1,0 +1,6 @@
+{
+  "name": "EduAgenda",
+  "description": "Um organizador de tarefas e prazos inteligente para estudantes, com lembretes para provas e trabalhos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
