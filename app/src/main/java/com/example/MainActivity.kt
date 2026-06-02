@@ -15,8 +15,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -839,35 +841,6 @@ fun AddTaskDialog(
 
     var notifyMinutesBefore by remember { mutableStateOf(15) } // 0 = standard deadline alarm, 15m, 60m (1h), 1440m (1d)
 
-    // Trigger Android Native DatePickerDialog
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
-            selectCalendar.set(Calendar.YEAR, year)
-            selectCalendar.set(Calendar.MONTH, month)
-            selectCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-            selectedDateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectCalendar.time)
-        },
-        selectCalendar.get(Calendar.YEAR),
-        selectCalendar.get(Calendar.MONTH),
-        selectCalendar.get(Calendar.DAY_OF_MONTH)
-    )
-
-    // Trigger Android Native TimePickerDialog
-    val timePickerDialog = TimePickerDialog(
-        context,
-        { _, hourOfDay, minute ->
-            selectCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-            selectCalendar.set(Calendar.MINUTE, minute)
-            selectCalendar.set(Calendar.SECOND, 0)
-            selectCalendar.set(Calendar.MILLISECOND, 0)
-            selectedTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectCalendar.time)
-        },
-        selectCalendar.get(Calendar.HOUR_OF_DAY),
-        selectCalendar.get(Calendar.MINUTE),
-        true // 24 hours format rule
-    )
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -992,7 +965,20 @@ fun AddTaskDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .clickable { datePickerDialog.show() }
+                            .clickable {
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, dayOfMonth ->
+                                        selectCalendar.set(Calendar.YEAR, year)
+                                        selectCalendar.set(Calendar.MONTH, month)
+                                        selectCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                                        selectedDateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(selectCalendar.time)
+                                    },
+                                    selectCalendar.get(Calendar.YEAR),
+                                    selectCalendar.get(Calendar.MONTH),
+                                    selectCalendar.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            }
                             .padding(12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1016,7 +1002,21 @@ fun AddTaskDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .clickable { timePickerDialog.show() }
+                            .clickable {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hourOfDay, minute ->
+                                        selectCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                                        selectCalendar.set(Calendar.MINUTE, minute)
+                                        selectCalendar.set(Calendar.SECOND, 0)
+                                        selectCalendar.set(Calendar.MILLISECOND, 0)
+                                        selectedTimeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(selectCalendar.time)
+                                    },
+                                    selectCalendar.get(Calendar.HOUR_OF_DAY),
+                                    selectCalendar.get(Calendar.MINUTE),
+                                    true
+                                ).show()
+                            }
                             .padding(12.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1194,23 +1194,6 @@ fun AddScheduleDialog(
         "#E53935" to "Rubi 🍎"
     )
 
-    // Selection indicators for start/end times via TimePickerDialog
-    val startTimePickerDialog = TimePickerDialog(
-        context,
-        { _, hour, minute ->
-            startTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
-        },
-        8, 0, true
-    )
-
-    val endTimePickerDialog = TimePickerDialog(
-        context,
-        { _, hour, minute ->
-            endTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
-        },
-        9, 30, true
-    )
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -1323,7 +1306,20 @@ fun AddScheduleDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .clickable { startTimePickerDialog.show() }
+                            .clickable {
+                                val portions = startTime.split(":")
+                                val currentHour = portions.getOrNull(0)?.toIntOrNull() ?: 8
+                                val currentMinute = portions.getOrNull(1)?.toIntOrNull() ?: 0
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        startTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+                                    },
+                                    currentHour,
+                                    currentMinute,
+                                    true
+                                ).show()
+                            }
                             .padding(12.dp)
                             .testTag("schedule_start_time_trigger")
                     ) {
@@ -1339,7 +1335,20 @@ fun AddScheduleDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                            .clickable { endTimePickerDialog.show() }
+                            .clickable {
+                                val portions = endTime.split(":")
+                                val currentHour = portions.getOrNull(0)?.toIntOrNull() ?: 9
+                                val currentMinute = portions.getOrNull(1)?.toIntOrNull() ?: 30
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        endTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+                                    },
+                                    currentHour,
+                                    currentMinute,
+                                    true
+                                ).show()
+                            }
                             .padding(12.dp)
                             .testTag("schedule_end_time_trigger")
                     ) {
