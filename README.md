@@ -99,16 +99,10 @@ Para compilar e executar o EduAgenda em sua máquina local ou emular pelo Androi
     gradle :app:testDebugUnitTest
     ```
 
-### 4. Continuous Integration & APKs no GitHub (GitHub Actions)
+### 4. Download do APK e Integração Contínua (GitHub)
 
-Este repositório possui uma **Workflow automatizada do GitHub Actions** (`.github/workflows/android-build.yml`). 
-
-Toda vez que você envia (`git push`) alterações para o GitHub:
-* O GitHub Actions compila automaticamente o projeto Android com Java 17.
-* Gera o arquivo **`app-debug.apk`** atualizado.
-* Disponibiliza o APK gerado para download diretamente na aba **Actions** do seu repositório no GitHub (em *Artifacts*).
-
-> **Nota sobre `.build-outputs` ou pastas temporárias:** Arquivos executáveis binários `.apk` gerados localmente durante o desenvolvimento em tempo de execução são ignorados em sistemas de versionamento Git por padrão (para manter o repositório leve). Com a Action configurada, o GitHub sempre compilará o APK mais recente de forma automática e limpa!
+* **Download Direto do APK:** O arquivo do aplicativo compilado está disponível diretamente no repositório na pasta **`apk/app-debug.apk`** para instalação imediata no seu celular Android.
+* **Build Automatizado (GitHub Actions):** O repositório conta com uma workflow automatizada (`.github/workflows/android-build.yml`) que compila e valida o APK a cada novo push ou pull request na branch principal.
 
 ---
 
