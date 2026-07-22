@@ -101,12 +101,14 @@ Para compilar e executar o EduAgenda em sua máquina local ou emular pelo Androi
 
 ### 4. Download do APK e Integração Contínua (GitHub)
 
-* **Download Direto do APK:** O arquivo compilado da versão mais recente está disponível na pasta **`releases/EduAgenda-v1.1.apk`**.
-  * ⚠️ **Como evitar o erro *"Ocorreu um problema ao analisar o pacote"*:
-    Ao navegar pelo GitHub no celular, o site exibe uma visualização em página HTML. Se você baixar essa página, o celular salvará um arquivo HTML em vez do arquivo binário do aplicativo. Para baixar corretamente:
-    1. Abra o arquivo `releases/EduAgenda-v1.1.apk` no GitHub.
-    2. Clique no botão **"Download raw file"** (ou **"Baixar arquivo bruto"** / ícone de seta para baixo `↓`).
-    3. Confirme que o download final possui cerca de ~19 MB antes de abrir no seu celular Android.
+* **Download Direto do APK:** O arquivo compilado da versão mais recente está disponível na pasta **`releases/EduAgenda-v1.2.apk`**.
+  * ⚠️ **Como evitar e resolver o erro *"Ocorreu um problema ao analisar o pacote"*:
+    1. **Tamanho do arquivo:** Verifique na pasta "Downloads" do seu celular se o arquivo baixado tem cerca de **19 MB**. Se tiver apenas alguns KBs (ex: 20 KB), você baixou a página HTML do GitHub por engano!
+    2. **Como baixar no GitHub pelo celular:**
+       * Acesse o arquivo `releases/EduAgenda-v1.2.apk` no repositório.
+       * Clique no ícone de três pontos (`...`) ou direto no botão **"Download raw file"** / **"Baixar arquivo bruto"** (ícone de seta para baixo `↓`).
+    3. **Versão do Android:** Atualizamos a compatibilidade do APK para suportar **Android 6.0 ou superior (minSdk 23)** e habilitamos o esquema de assinatura V1 e V2.
+    4. **Permissão de Instalação:** Certifique-se de permitir "Instalar aplicativos de fontes desconhecidas" para o seu navegador ou Gerenciador de Arquivos nas configurações do seu Android.
 * **Build Automatizado (GitHub Actions):** O repositório conta com uma workflow automatizada (`.github/workflows/android-build.yml`) que compila e gera o APK a cada novo push ou pull request na aba **Actions** em *Artifacts*.
 
 ---
