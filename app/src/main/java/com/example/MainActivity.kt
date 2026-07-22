@@ -152,7 +152,9 @@ fun EduAgendaApp(
                                 imageVector = Icons.Default.School,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp).padding(end = 6.dp)
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .padding(end = 6.dp)
                             )
                             Text(
                                 text = "EduAgenda",
