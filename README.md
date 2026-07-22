@@ -101,8 +101,8 @@ Para compilar e executar o EduAgenda em sua máquina local ou emular pelo Androi
 
 ### 4. Download do APK e Integração Contínua (GitHub)
 
-* **Download Direto do APK:** O arquivo do aplicativo está na pasta **`apk/app-debug.apk`**.
-  * ⚠️ **Atenção ao baixar pelo celular no GitHub:** Para evitar o erro *"Ocorreu um problema ao analisar o pacote"*, não baixe a página do arquivo. No GitHub, abra o arquivo `apk/app-debug.apk` e clique no botão **"Download raw file"** (ou **"Baixar arquivo bruto"** / ícone de download com seta para baixo) para baixar o arquivo `.apk` real e não uma página HTML.
+* **Download Direto do APK:** O arquivo compilado da versão atual está na pasta **`releases/EduAgenda-v1.0.apk`**.
+  * ⚠️ **Atenção ao baixar pelo celular no GitHub:** Abra o arquivo `releases/EduAgenda-v1.0.apk` e clique em **"Download raw file"** (ou **"Baixar arquivo bruto"** / ícone de seta para baixo) para baixar o `.apk` direto. Arquivos salvos como página HTML causam o erro *"Ocorreu um problema ao analisar o pacote"*.
 * **Build Automatizado (GitHub Actions):** O repositório conta com uma workflow automatizada (`.github/workflows/android-build.yml`) que compila e gera o APK a cada novo push ou pull request na aba **Actions** em *Artifacts*.
 
 ---
